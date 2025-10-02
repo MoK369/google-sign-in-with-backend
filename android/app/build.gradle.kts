@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,10 +8,20 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Load keystore properties from android/key.properties
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+} else {
+    println("⚠️ Warning: key.properties file not found. Release signing may fail.")
+}
+
 android {
     namespace = "com.main369.social_sign_in"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+    ndkVersion = "29.0.14033849"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -20,10 +33,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.main369.social_sign_in"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -32,34 +42,37 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("/home/elmohannd/StudioProjects/social_sign_in/release-key.jks")
-            storePassword = "gobbledygook"
-            keyAlias = "google-sigin-keystore"
-            keyPassword = "gobbledygook"
-        }
-    }
-    signingConfigs {
-        getByName("debug").apply {
-            storeFile = file("/home/elmohannd/StudioProjects/social_sign_in/debug_key.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            val storeFilePath = keystoreProperties["storeFile"] as? String
+            val storePassword = keystoreProperties["storePassword"] as? String
+            val keyAlias = keystoreProperties["keyAlias"] as? String
+            val keyPassword = keystoreProperties["keyPassword"] as? String
+
+            if (
+                storeFilePath.isNullOrBlank() ||
+                storePassword.isNullOrBlank() ||
+                keyAlias.isNullOrBlank() ||
+                keyPassword.isNullOrBlank()
+            ) {
+                println("⚠️ Warning: One or more keystore properties are missing or invalid.")
+            } else {
+                storeFile = file(storeFilePath)
+                this.storePassword = storePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
         }
     }
 
     buildTypes {
-        getByName("debug") {
-            signingConfig = signingConfigs.getByName("debug")
-        }
-
         getByName("release") {
             signingConfig = signingConfigs.getByName("release")
-//            isMinifyEnabled = false
-//            isShrinkResources = false
-//            proguardFiles(
-//                getDefaultProguardFile("proguard-android-optimize.txt"),
-//                "proguard-rules.pro"
-//            )
+            // Uncomment if you want to enable ProGuard
+            // isMinifyEnabled = false
+            // isShrinkResources = false
+            // proguardFiles(
+            //     getDefaultProguardFile("proguard-android-optimize.txt"),
+            //     "proguard-rules.pro"
+            // )
         }
     }
 }
